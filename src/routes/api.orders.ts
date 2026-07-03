@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MongoClient, ServerApiVersion } from "mongodb";
 
-const MONGODB_URI =
-  "mongodb+srv://tharunselvazoom_db_user:Tharunmongodb23@cluster0.4ogfznc.mongodb.net/?appName=Cluster0";
-const DB_NAME = "EDGE_DATABASE";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://tharunselvazoom_db_user:Tharunmongodb23@cluster0.4ogfznc.mongodb.net/?appName=Cluster0";
+const DB_NAME = process.env.DB_NAME || "EDGE_DATABASE";
 const COLLECTION_NAME = "WOW";
 
 let cachedClient: MongoClient | null = null;
