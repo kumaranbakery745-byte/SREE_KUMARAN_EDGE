@@ -106,6 +106,23 @@ function PosScreen() {
         total,
       };
 
+      // Call our new MongoDB API endpoint
+      console.log("Sending order to MongoDB:", salePayload);
+      const apiResponse = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(salePayload),
+      });
+
+      if (!apiResponse.ok) {
+        throw new Error("Failed to insert order into MongoDB");
+      }
+
+      const apiResult = await apiResponse.json();
+      console.log("MongoDB insertion successful:", apiResult);
+
       recordSale(salePayload);
 
       const receiptHtml = buildReceiptHtml({
@@ -130,11 +147,11 @@ function PosScreen() {
 
       setCart([]);
       setTendered(null);
-      toast.success(`Bill #${billNo} queued for printing`);
+      toast.success(`Bill #${billNo} queued for printing & saved to database`);
     } catch (err) {
       console.error("Checkout error:", err);
       console.error("Error details:", JSON.stringify(err, null, 2));
-      toast.error(`Failed to queue print job: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      toast.error(`Failed to process order: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setSubmitting(false);
     }

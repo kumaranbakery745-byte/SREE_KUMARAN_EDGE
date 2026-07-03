@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as PrinterRelayRouteImport } from './routes/printer-relay'
 import { Route as PosRouteImport } from './routes/pos'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -18,11 +17,6 @@ import { Route as IndexRouteImport } from './routes/index'
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrinterRelayRoute = PrinterRelayRouteImport.update({
-  id: '/printer-relay',
-  path: '/printer-relay',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosRoute = PosRouteImport.update({
@@ -45,14 +39,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/pos': typeof PosRoute
-  '/printer-relay': typeof PrinterRelayRoute
   '/reports': typeof ReportsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/pos': typeof PosRoute
-  '/printer-relay': typeof PrinterRelayRoute
   '/reports': typeof ReportsRoute
 }
 export interface FileRoutesById {
@@ -60,22 +52,20 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/pos': typeof PosRoute
-  '/printer-relay': typeof PrinterRelayRoute
   '/reports': typeof ReportsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/pos' | '/printer-relay' | '/reports'
+  fullPaths: '/' | '/admin' | '/pos' | '/reports'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/pos' | '/printer-relay' | '/reports'
-  id: '__root__' | '/' | '/admin' | '/pos' | '/printer-relay' | '/reports'
+  to: '/' | '/admin' | '/pos' | '/reports'
+  id: '__root__' | '/' | '/admin' | '/pos' | '/reports'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   PosRoute: typeof PosRoute
-  PrinterRelayRoute: typeof PrinterRelayRoute
   ReportsRoute: typeof ReportsRoute
 }
 
@@ -86,13 +76,6 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/printer-relay': {
-      id: '/printer-relay'
-      path: '/printer-relay'
-      fullPath: '/printer-relay'
-      preLoaderRoute: typeof PrinterRelayRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pos': {
@@ -123,7 +106,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   PosRoute: PosRoute,
-  PrinterRelayRoute: PrinterRelayRoute,
   ReportsRoute: ReportsRoute,
 }
 export const routeTree = rootRouteImport
