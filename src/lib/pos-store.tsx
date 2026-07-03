@@ -252,7 +252,6 @@ export function buildReceiptHtml(opts: {
     )
     .join("");
 
-  // Nuclear tax removal — grand total is strictly Sum(price * qty).
   const totalQty = sale.items.reduce((s, i) => s + i.qty, 0);
   const grandTotal = sale.items.reduce((s, i) => s + i.price * i.qty, 0);
 
@@ -277,36 +276,21 @@ export function buildReceiptHtml(opts: {
   .item-qty { font-size: 15px; font-weight: 800; text-align: center; }
   .item-amt { text-align: right; font-weight: 700; font-size: 13px; }
   .grand { font-weight: 800; font-size: 17px; }
-  .outlet-box {
-    border: 2px solid #000 !important;
-    padding: 5px;
-    text-align: center;
-    margin-bottom: 5px;
-    font-size: 18px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    word-wrap: break-word;
-  }
-  .kot-no { text-align:center; font-size: 16px; font-weight: 800; margin-bottom: 5px; letter-spacing: 1px; }
-  .kitchen-sub { font-size: 11px; font-weight: 700; text-align: center; margin-bottom: 5px; letter-spacing: 1px; }
+  .store-name { text-align:center; font-size:17px; font-weight:800; letter-spacing:1px; text-transform: uppercase; margin-bottom: 2px; }
+  .branch { text-align:center; font-size:13px; font-weight:700; margin-bottom:3px; }
+  .bill-no { text-align:center; font-size: 14px; font-weight: 800; margin-bottom: 3px; }
+  .date { text-align:center; font-size:10px; font-weight:600; margin-bottom:5px; }
 </style></head><body>
-  <div class="outlet-box">${escapeHtml(outletLabel)}</div>
-  ${billNo != null ? `<div class="kot-no">KOT NO: #${billNo}</div>` : ""}
-  <div class="kitchen-sub">* KITCHEN ORDER INDENT *</div>
-  <div class="center">
-    <h2 style="letter-spacing:1px;font-weight:800;font-size:15px;">KUMARAN EDGE</h2>
-    <p style="font-size:10px;font-weight:600;">an app by sree kumaran</p>
-    <p style="font-size:10px;font-weight:600;">${dt}</p>
-  </div>
+  <div class="store-name">KUMARAN EDGE</div>
+  <div class="branch">${escapeHtml(outletLabel)}</div>
+  ${billNo != null ? `<div class="bill-no">Bill No: #${billNo}</div>` : ""}
+  <div class="date">${dt}</div>
   <div class="hr"></div>
   <table>
     <colgroup><col class="c-name"/><col class="c-qty"/><col class="c-rate"/></colgroup>
-    <thead><tr><th>Product</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Rate</th></tr></thead>
+    <thead><tr><th>Product</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
-  <div class="hr"></div>
-  <div class="row grand"><span>TOTAL QTY</span><span>${totalQty}</span></div>
   <div class="hr"></div>
   <div class="row grand"><span>GRAND TOTAL</span><span>₹${grandTotal.toFixed(2)}</span></div>
   <div class="hr"></div>

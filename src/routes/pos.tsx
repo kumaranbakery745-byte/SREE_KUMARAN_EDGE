@@ -20,7 +20,6 @@ export const Route = createFileRoute("/pos")({
   component: PosScreen,
 });
 
-const TAX_RATE = 0.05;
 const TENDER_PRESETS = [100, 500];
 
 function PosScreen() {
@@ -83,9 +82,7 @@ function PosScreen() {
   const removeItem = (idx: number) =>
     setCart((prev) => prev.filter((_, i) => i !== idx));
 
-  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const tax = subtotal * TAX_RATE;
-  const total = subtotal + tax;
+  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const change = tendered != null ? tendered - total : null;
 
   const hasEmptyCakeNote = cart.some((i) => i.isCustomCake && !i.customNote?.trim());
@@ -95,14 +92,11 @@ function PosScreen() {
     if (!canCheckout || !user) return;
     setSubmitting(true);
     try {
-      const billNo = nextBillNo(branch);
       const outletLabel = BRANCH_LABELS[branch];
       const salePayload = {
         branch,
         cashier: user.email,
         items: cart,
-        subtotal,
-        tax,
         total,
       };
 
@@ -121,9 +115,10 @@ function PosScreen() {
       }
 
       const apiResult = await apiResponse.json();
+      const billNo = apiResult.billNo;
       console.log("MongoDB insertion successful:", apiResult);
 
-      recordSale(salePayload);
+      recordSale({ ...salePayload, subtotal: total, tax: 0 });
 
       const receiptHtml = buildReceiptHtml({
         sale: salePayload,
@@ -291,8 +286,6 @@ function PosScreen() {
             </div>
 
             <div className="p-4 border-t border-slate-200 space-y-1.5 text-sm">
-              <Row label="Subtotal" value={`₹${subtotal.toFixed(2)}`} />
-              <Row label="Tax (5%)" value={`₹${tax.toFixed(2)}`} />
               <div className="flex justify-between items-baseline pt-2 border-t border-slate-100">
                 <span className="font-semibold text-slate-900">Grand Total</span>
                 <span className="text-2xl font-black text-slate-900">₹{total.toFixed(2)}</span>
