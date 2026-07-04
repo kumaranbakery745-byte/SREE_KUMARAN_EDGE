@@ -1,29 +1,14 @@
-const { initializeApp, cert } = require("firebase-admin/app");
-const { getDatabase } = require("firebase-admin/database");
+const { MongoClient } = require("mongodb");
 const { exec } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const DATABASE_URL = process.env.FIREBASE_DATABASE_URL || "https://sree-kumaran-edge-default-rtdb.firebaseio.com";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://tharunselvazoom_db_user:Tharunmongodb23@cluster0.4ogfznc.mongodb.net/?appName=Cluster0";
+const DB_NAME = "EDGE_DATABASE";
+const COLLECTION_NAME = "PRINT_JOBS";
 
-const serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
-
-if (!fs.existsSync(serviceAccountPath)) {
-  console.error("ERROR: serviceAccountKey.json not found at:", serviceAccountPath);
-  console.error("Please ensure the Firebase Admin SDK service account key is present.");
-  process.exit(1);
-}
-
-const serviceAccount = require(serviceAccountPath);
-
-const app = initializeApp({
-  credential: cert(serviceAccount),
-  databaseURL: DATABASE_URL,
-});
-
-const db = getDatabase(app);
-const printRef = db.ref("print_jobs");
+const client = new MongoClient(MONGODB_URI);
 const processing = new Set();
 
 function printReceipt(html) {
@@ -60,29 +45,33 @@ function printReceipt(html) {
   });
 }
 
-async function handleJob(snapshot) {
-  const jobId = snapshot.key;
+async function handleJob(job) {
+  const jobId = job._id?.toString();
   if (!jobId || processing.has(jobId)) return;
 
-  const data = snapshot.val();
-  if (!data?.receipt_html || data.status !== "pending") {
+  if (!job?.receipt_html || job.status !== "pending") {
     console.log(`Skipping job ${jobId}: missing receipt_html or not pending status`);
     return;
   }
 
   processing.add(jobId);
-  console.log(`[${new Date().toISOString()}] New print job detected (${jobId}) from outlet: ${data.outlet_name}`);
+  console.log(`[${new Date().toISOString()}] New print job detected (${jobId}) from outlet: ${job.outlet_name}`);
 
   try {
-    await printReceipt(data.receipt_html);
-    await snapshot.ref.remove();
+    await printReceipt(job.receipt_html);
+    
+    // Delete the job from MongoDB after successful print
+    await client.db(DB_NAME).collection(COLLECTION_NAME).deleteOne({ _id: job._id });
     console.log(`[${new Date().toISOString()}] Job ${jobId} printed successfully and removed from queue`);
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Printer error for job ${jobId}:`, error.message);
     
     try {
-      await snapshot.ref.update({ status: "failed", error: error.message });
-      console.log(`[${new Date().toISOString()}] Job ${jobId} marked as failed in Firebase`);
+      await client.db(DB_NAME).collection(COLLECTION_NAME).updateOne(
+        { _id: job._id },
+        { $set: { status: "failed", error: error.message } }
+      );
+      console.log(`[${new Date().toISOString()}] Job ${jobId} marked as failed in MongoDB`);
     } catch (updateError) {
       console.error(`[${new Date().toISOString()}] Failed to update job status:`, updateError.message);
     }
@@ -91,19 +80,42 @@ async function handleJob(snapshot) {
   }
 }
 
-console.log(`[${new Date().toISOString()}] Printer relay started`);
-console.log(`Listening on: ${DATABASE_URL}/print_jobs`);
-console.log("Waiting for print jobs...");
+async function startRelay() {
+  try {
+    await client.connect();
+    console.log(`[${new Date().toISOString()}] Connected to MongoDB`);
+    console.log(`[${new Date().toISOString()}] Watching collection: ${DB_NAME}.${COLLECTION_NAME}`);
+    console.log("Waiting for print jobs...");
 
-printRef.on("child_added", (snapshot) => {
-  void handleJob(snapshot);
-});
+    const collection = client.db(DB_NAME).collection(COLLECTION_NAME);
+    const changeStream = collection.watch([
+      { $match: { 
+        "fullDocument.status": "pending",
+        operationType: { $in: ["insert", "update"] }
+      }}
+    ]);
 
-printRef.on("error", (error) => {
-  console.error("Firebase database error:", error);
-});
+    changeStream.on("change", async (change) => {
+      if (change.fullDocument) {
+        void handleJob(change.fullDocument);
+      }
+    });
 
-process.on("SIGINT", () => {
+    changeStream.on("error", (error) => {
+      console.error("MongoDB change stream error:", error);
+    });
+
+  } catch (error) {
+    console.error("Failed to start relay:", error);
+    process.exit(1);
+  }
+}
+
+console.log(`[${new Date().toISOString()}] Printer relay starting...`);
+startRelay();
+
+process.on("SIGINT", async () => {
   console.log("\nShutting down printer relay...");
+  await client.close();
   process.exit(0);
 });

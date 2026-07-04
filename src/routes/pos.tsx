@@ -1,8 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ref, push } from "firebase/database";
 import { usePos, BRANCH_LABELS, buildReceiptHtml, nextBillNo, type SaleItem } from "@/lib/pos-store";
-import { db } from "@/lib/firebase";
 import { AppHeader } from "@/components/pos/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,6 +96,8 @@ function PosScreen() {
         cashier: user.email,
         items: cart,
         total,
+        subtotal: total,
+        tax: 0,
       };
 
       // Call our new MongoDB API endpoint
@@ -127,22 +127,32 @@ function PosScreen() {
         billNo,
       });
 
-      const printRef = ref(db, "print_jobs");
-      console.log("Pushing to Firebase print_jobs:", { outletLabel, billNo });
-      
-      const pushResult = await push(printRef, {
-        receipt_html: receiptHtml,
-        outlet_name: outletLabel,
-        status: "pending",
-        created_at: new Date().toISOString(),
-        timestamp: Date.now(),
+      // Insert print job into MongoDB
+      console.log("Inserting print job into MongoDB:", { outletLabel, billNo });
+      const printJobResponse = await fetch("/api/print-jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          receipt_html: receiptHtml,
+          outlet_name: outletLabel,
+          status: "pending",
+          created_at: new Date().toISOString(),
+          timestamp: Date.now(),
+          bill_no: billNo,
+        }),
       });
 
-      console.log("Firebase push successful, key:", pushResult.key);
+      if (!printJobResponse.ok) {
+        console.warn("Failed to queue print job (non-critical):", printJobResponse.statusText);
+      } else {
+        console.log("Print job inserted into MongoDB successfully");
+      }
 
       setCart([]);
       setTendered(null);
-      toast.success(`Bill #${billNo} queued for printing & saved to database`);
+      toast.success(`Bill #${billNo} saved to database`);
     } catch (err) {
       console.error("Checkout error:", err);
       console.error("Error details:", JSON.stringify(err, null, 2));
