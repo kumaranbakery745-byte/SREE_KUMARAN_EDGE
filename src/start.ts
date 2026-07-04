@@ -37,10 +37,25 @@ async function connectToDatabase() {
 async function getNextBillNumber(db: any, branch: string) {
   const result = await db.collection(COUNTERS_COLLECTION).findOneAndUpdate(
     { branch },
-    { $inc: { count: 1 } },
+    { 
+      $inc: { count: 1 },
+      $setOnInsert: { count: 1 }
+    },
     { upsert: true, returnDocument: "after" }
   );
-  return result.value.count;
+  
+  // Modern MongoDB Node.js driver returns result.value
+  if (result && result.value && result.value.count) {
+    return result.value.count;
+  }
+  
+  // Fallback for older driver versions
+  const doc = await db.collection(COUNTERS_COLLECTION).findOne({ branch });
+  if (doc && doc.count) {
+    return doc.count;
+  }
+  
+  return 1;
 }
 
 const apiMiddleware = createMiddleware().server(async ({ next, request }) => {
